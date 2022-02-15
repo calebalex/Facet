@@ -1,7 +1,7 @@
 import React from 'react';
 import type {Node} from 'react';
 
-import { LandingScreen, MainScreen } from './App/screenIndex.js';
+import { LandingScreen, MainScreen } from './screenIndex.js';
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, } from 'firebase/auth';
