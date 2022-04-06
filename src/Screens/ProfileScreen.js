@@ -19,6 +19,7 @@ const ProfileScreen = () => {
 
   return(
     <View>
+      <Text>Signed in as {auth.currentUser.email}</Text>
       <Button title="Logout" onPress={signOutUser}/>
     </View>
   );
