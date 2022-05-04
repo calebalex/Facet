@@ -1,20 +1,21 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {View, StyleSheet, Text, Pressable, Image, Animated} from 'react-native';
 import { VibrancyView } from '@react-native-community/blur';
-import { ref, getStorage, getBytes, getDownloadURL } from 'firebase/storage';
-import { useDownloadURL } from 'react-firebase-hooks/storage'
-import LoadingIndicator from './LoadingIndicator';
 
-const storage = getStorage();
 
-const EntryButton = (props) => {
+const TeamButton = ({team, image, handleButtonPress}) => {
+    const [imageState, setImageState] = useState();
     const scale = useRef(new Animated.Value(1)).current;
-    
-    //const [imageDownload, loading, error] = useDownloadURL(ref(storage, props.entry.image))
-    
+
     const viewEntry = () => {
-        props.handleButtonPress(props.entry);
+        handleButtonPress(team);
     };
+
+    useEffect(() => {
+        if (team.hasImage) {
+            setImageState(team.cover_photo);
+        }
+    }, [imageState]);
 
     const resizeAnim = async (scaleToExpand) => {
             Animated.spring(scale, {
@@ -34,12 +35,10 @@ const EntryButton = (props) => {
        <View  style={styles.container}>
             <Animated.View style={{transform: [{scale: scale}]}}>
                     <Pressable style={styles.buttonContainer} onPressIn={() => {resizeAnim(1.03)}} onPressOut={() => {resizeAnim(1);}} onPress={viewEntry}>
-                        
-                        <Image style={styles.image} source={{uri: props.entry.image}}/>
-                        
+                        <Image style={styles.image} source={{uri: team.team_image}}/>
                     </Pressable>  
                     <View style={styles.text}>
-                        <Text style={{alignSelf:"center",fontSize: 16, fontWeight: "500"}}>{props.entry.entry_name}</Text>
+                        <Text style={{alignSelf:"center",fontSize: 16, fontWeight: "500"}}>{team.team_name}</Text>
                     </View> 
             </Animated.View>
             
@@ -82,4 +81,4 @@ const styles = StyleSheet.create({
     
 
 });
-export default EntryButton;
+export default TeamButton;

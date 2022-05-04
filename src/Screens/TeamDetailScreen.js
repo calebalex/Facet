@@ -1,4 +1,3 @@
-import { getAuth } from 'firebase/auth';
 import { doc, getFirestore, query } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useCollectionData, useDocumentData } from 'react-firebase-hooks/firestore';
@@ -7,19 +6,19 @@ import {Button, Input} from 'react-native-elements';
 import { AddButton, FieldItem, ReadOnlyFieldItem } from '../componentIndex';
 
 const firestore = getFirestore();
-const auth = getAuth();
 
-const DetailScreen = ({route, navigation}) => {
-  const {userID, entry} = route.params;
-   const [entryData] = useDocumentData(doc(firestore, "Users", auth.currentUser.uid , "Entries", entry.entry_ID))
-
-  
+const TeamDetailScreen = ({route, navigation}) => {
+    const {teamID, entry} = route.params;
+    const [entryFields, setEntryFields] = useState();
+    //const [entryName, setEntryName] = useState();
+    const [entryData] = useDocumentData(doc(firestore, "Teams", teamID, "Entries", entry.entry_ID))
+    
     const handleEdit = () => {
-      navigation.push("Edit", {previousScreen: route.name , entry: entryData});
+      navigation.push("Edit", {previousScreen: route.name , entry: entryData, teamID: teamID});
     };
   
     const handleLogButton = () => {
-      navigation.push("Service Logs", {entry: entry});
+      navigation.push("Service Logs", {entry: entry, teamID: teamID});
     };
 
     const renderItem = (field, index) => {
@@ -60,7 +59,7 @@ const DetailScreen = ({route, navigation}) => {
           );
         } 
       });
-      
+      console.log(entryFields);
     }, [navigation, entryData]);
   
     return(
@@ -79,9 +78,8 @@ shadowOpacity: 0.2,}}>
             
           </>
         :
-        null
+        console.log("no image")
         }
-
         {entryData ?
         
           <FlatList 
@@ -100,4 +98,4 @@ shadowOpacity: 0.2,}}>
     );
   };
 
-  export default DetailScreen;
+  export default TeamDetailScreen;

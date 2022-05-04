@@ -7,7 +7,6 @@ const LogEntryComponent = ({log, manageLog, deleteLog}) => {
     const [expanded, setExpanded] = useState(false);
     const [buttonText, setButtonText] = useState("View More");
 
-    
     const date = new Date(log.date["seconds"] * 1000);
     const dateText = date.toLocaleDateString();
 

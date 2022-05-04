@@ -1,22 +1,25 @@
 import React, { useState, useEffect,} from 'react';
-import { FlatList, View, Image, Alert} from 'react-native';
+import { FlatList, View, Image , Alert} from 'react-native';
 import { Icon, Button} from 'react-native-elements';
 import { Input } from 'react-native-elements';
 import ImageCropPicker from 'react-native-image-crop-picker';
 import { FieldItem, AddButton, PhotoButton} from '../componentIndex';
 import {doc, deleteDoc, updateDoc, getFirestore,} from "firebase/firestore";
 import { getAuth } from 'firebase/auth';
-import { ref, getStorage, uploadBytes, deleteObject, getDownloadURL} from 'firebase/storage';
+import { deleteObject, getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
+
 
 const firestore = getFirestore();
 const auth = getAuth();
 const storage = getStorage();
 
-const EditScreen = ({route, navigation}) => {
+const TeamEditScreen = ({route, navigation}) => {
     const entry = route.params.entry
     const [entryName, setEntryName] = useState(entry.entry_name);
     const [entryFields, setEntryFields] = useState(entry.entry_fields);
     const entryID = entry.entry_ID;
+    const teamID = route.params.teamID;
+
     const [image, setImage] = useState(entry.image);
     const [imageURI, setImageURI] = useState(entry.image);
     const [imageUpdated, setImageUpdated] = useState(false);
@@ -44,7 +47,7 @@ const EditScreen = ({route, navigation}) => {
     }
     
     const uploadImage = async (docID, image) => {
-        const storageRef = ref(storage, 'Users/' + auth.currentUser.uid + "/Entries/" + docID + ".jpeg")
+        const storageRef = ref(storage, 'Teams/' + teamID + "/Entries/" + docID + ".jpeg")
     
         urltoFile(`data:${image.mime};base64,${image.data}`, docID + ".jpeg", image.mime )
         .then((image) => {
@@ -53,7 +56,7 @@ const EditScreen = ({route, navigation}) => {
                 await getDownloadURL(storageRef)
                 .then((value) => {
                     console.log(value)
-                    const docRef = doc(firestore, "Users", auth.currentUser.uid, "Entries", docID);
+                    const docRef = doc(firestore, "Teams", teamID, "Entries", docID);
                     updateDoc(docRef, {
                         "image": value,
                         "hasImage": true
@@ -62,22 +65,24 @@ const EditScreen = ({route, navigation}) => {
             })
             .catch((error) => {console.log(error)})
         })
-        .catch((error) => {"something" + console.log(error)})
+        .catch((error) => {console.log(error)})
         
       }
 
     const handleUpdate = () => {
-        const docRef = doc(firestore, "Users", auth.currentUser.uid, "Entries", entryID);
-
+        console.log("here")
+        const docRef = doc(firestore, "Teams", teamID, "Entries", entryID);
+        console.log("here2")
         if (JSON.stringify(entry) != JSON.stringify(updatedEntry)) {
+            console.log("here 3")
             updateDoc(docRef, updatedEntry)
             .then(() => {
-                navigation.navigate(route.params.previousScreen, {entry: updatedEntry});
+                navigation.goBack();
             })
             .catch((error) => {
                 console.log(error);
             });
-            if(imageUpdated) {
+            if (imageUpdated) {
                 uploadImage(updatedEntry.entry_ID, image)
             }
         }
@@ -88,16 +93,15 @@ const EditScreen = ({route, navigation}) => {
     };
 
     const handleDelete = () => {
-        const docRef = doc(firestore,"Users", auth.currentUser.uid, "Entries", entry.entry_ID);
-        
+        const docRef = doc(firestore, "Teams", teamID, "Entries", entryID);
         if(entry.hasImage == true) {
         
-            const storageRef = ref(storage, "Users/" + auth.currentUser.uid + "/Entries/" + entryID + ".jpeg");
+            const storageRef = ref(storage, "Teams/" + teamID + "/Entries/" + entryID + ".jpeg");
             deleteObject(storageRef)
             .then(() => {
                 deleteDoc(docRef)
                 .then(() => {
-                    navigation.navigate("Entries");
+                    navigation.navigate("Team Entries", {teamID: teamID});
                 })
                 .catch((error) => {
                 console.log(error);
@@ -109,7 +113,7 @@ const EditScreen = ({route, navigation}) => {
         } else {
             deleteDoc(docRef)
                 .then(() => {
-                    navigation.navigate("Entries");
+                    navigation.navigate("Team Entries", {teamID: teamID});
                 })
                 .catch((error) => {
                 console.log(error);
@@ -142,7 +146,35 @@ const EditScreen = ({route, navigation}) => {
         
       };
 
-      const addPhotos = () => {
+    const renderItem = (field, index) => {
+
+        let name = null;
+        let value = null;
+    
+        Object.keys(field).map((key) => {
+          if(key === 'fieldName') {
+            name = field[key]; 
+          }
+          if(key === 'fieldValue') {
+            value = field[key];
+          }
+        })
+        
+        return(
+            <View style={{marginBottom: 15}}>
+              <FieldItem 
+                itemIndex={index} 
+                title={name} 
+                itemValue={value} 
+                onDelete={handleRemoveField} 
+                onTextChange={handleInputChange} 
+              />
+            </View>);
+        
+    };
+  
+
+    const addPhotos = () => {
         Alert.alert("Options",null,  
                 [
                     {
@@ -187,33 +219,6 @@ const EditScreen = ({route, navigation}) => {
       
       }
 
-    const renderItem = (field, index) => {
-
-        let name = null;
-        let value = null;
-    
-        Object.keys(field).map((key) => {
-          if(key === 'fieldName') {
-            name = field[key]; 
-          }
-          if(key === 'fieldValue') {
-            value = field[key];
-          }
-        })
-        
-        return(
-            <View style={{marginBottom: 15}}>
-              <FieldItem 
-                itemIndex={index} 
-                title={name} 
-                itemValue={value} 
-                onDelete={handleRemoveField} 
-                onTextChange={handleInputChange} 
-              />
-            </View>);
-        
-    };
-  
     useEffect(() => {
         navigation.setOptions({
             headerRight: () => {
@@ -278,7 +283,7 @@ const EditScreen = ({route, navigation}) => {
               <PhotoButton onPress={addPhotos} />
               </>
             }
-            
+
             {entryFields ?
               <FlatList 
                 data={entryFields}
@@ -305,4 +310,4 @@ const EditScreen = ({route, navigation}) => {
     ); 
 };
 
-export default EditScreen;
+export default TeamEditScreen;

@@ -1,65 +1,102 @@
 import React, { useEffect, useState } from 'react';
 import {Text, FlatList, View, StyleSheet, Modal, Alert, Image} from 'react-native';
 import {Input, Button, Icon} from 'react-native-elements';
-import { FieldItem, AddButton, PhotoButton, EditButton } from '../componentIndex';
+import { FieldItem, AddButton, PhotoButton} from '../componentIndex';
 import { launchCamera,launchImageLibrary } from 'react-native-image-picker';
 import ImageCropPicker from 'react-native-image-crop-picker';
 import { getApp } from 'firebase/app';
-import {doc, setDoc, collection, getFirestore, } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, uploadString } from 'firebase/storage';
+import {doc, setDoc, collection, getFirestore, updateDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, uploadString, getDownloadURL,} from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
+
 
 const app = getApp();
 const firestore = getFirestore(app);
 const storage = getStorage(app);
+const auth = getAuth();
 
-const AddEntryComponent = ({fireAuth, modalVisibility, toggleModalVisibility, createDocument}) => {
-  const [entryFields, setEntryFields] = useState([]);
-  const [entryName, setEntryName] = useState();
- 
+const AddTeamComponent = ({fireAuth, modalVisibility, toggleModalVisibility}) => {
+  const [teamDescription, setTeamDescription] = useState();
+  const [teamName, setTeamName] = useState();
+  const [teamPasscode, setTeamPasscode] = useState();
   const [image, setImage] = useState();
 
   const handleCloseModal = () => {
-    setEntryFields([]);
-    setEntryName();
+    setTeamDescription();
+    setTeamName();
     setImage();
     toggleModalVisibility();
   }
 
+  const urltoFile = async (url, filename, mimeType) => {
+    return (fetch(url)
+        .then((response) => {
+            return response.blob();
+            
+        })
+        .then((buffer) => {
+            return new File([buffer], filename, {type:mimeType});
+        })
+    );
+}
+
+  const uploadImage = (teamID, images) => {
+    const storageRef = ref(storage, 'Teams/' + teamID + "/team-photo.jpeg")
+
+    urltoFile(`data:${image.mime};base64,${image.data}`,  "team-photo.jpeg", image.mime )
+    .then((image) => {
+        uploadBytes(storageRef, image)
+        .then(async () => {
+            await getDownloadURL(storageRef)
+            .then((value) => {
+                console.log(value)
+                const docRef = doc(firestore, "Teams", teamID);
+                updateDoc(docRef, {
+                    "team_image": value,
+                    "hasImage": true
+                })
+            })
+        })
+    })
+    .catch((error) => {"something" + console.log(error)})
+  }
+
+  
   const runMethod = async () => {
     
-    const entry = {
-        entry_name: entryName,
-        entry_fields: entryFields,
-        hasImage: false,
-        
+    const newDocRef = doc(collection(firestore, "Teams",));
+    
+    const team = {
+        teamID: newDocRef.id,
+        team_name: teamName,
+        team_description: teamDescription,
+        Owner: fireAuth.currentUser.uid,
+        Members: [fireAuth.currentUser.uid],
+        team_passcode: teamPasscode,
+        hasImage: false
     };
     
-    await createDocument(entry, image);
+    await setDoc(newDocRef, team)
+      .then((reference, data) => {
+        const memberRef = doc(collection(firestore, "Teams", team.teamID, "Members"));
+        
+        const member = {
+          member_id: fireAuth.currentUser.uid,
+          display_name: fireAuth.currentUser.displayName,
+          admin: true,
+          imageURL: fireAuth.currentUser.photoURL
+        }
+        setDoc(memberRef, member)
+        //console.log(reference);
+        //console.log(data);
+      })
+      .catch((error) => {
+        console.log(error)
+      });
+      if(image) {
+        uploadImage(newDocRef.id, image)
+      }
    
-  };
-
-  const handleAddField = () => {
-    const fields = [...entryFields];
-    fields.push(
-      {fieldName: "", fieldValue: ""}
-    );
-    setEntryFields(fields);
-    
-  }
-
-  const handleRemoveField = (index) => {
-    const fields = [...entryFields];
-    fields.splice(index, 1);
-    setEntryFields(fields);
-  }
-
-  const handleInputChange = (index, value, target) => {
-    const fields = [...entryFields];
-    const updatedField = target;
-    fields[index][updatedField] = value;
-
-    setEntryFields(fields);
-    
   };
 
   const handleAdd = () => {
@@ -69,33 +106,6 @@ const AddEntryComponent = ({fireAuth, modalVisibility, toggleModalVisibility, cr
     .catch((error) => {console.log(error)});
     
   }
-
-  const renderItem = (field, index) => {
-
-    let name = null;
-    let value = null;
-
-    Object.keys(field).map((key) => {
-      if(key === 'fieldName') {
-        name = field[key]; 
-      }
-      if(key === 'fieldValue') {
-        value = field[key];
-      }
-    })
-    
-    return(
-    <View style={{marginBottom: 15}}>
-      <FieldItem 
-        itemIndex={index} 
-        title={name} 
-        itemValue={value} 
-        onDelete={handleRemoveField} 
-        onTextChange={handleInputChange} 
-      />
-    </View>);
-    
-  };
 
   const addPhotos = () => {
     Alert.alert("Options",null,  
@@ -142,7 +152,7 @@ const AddEntryComponent = ({fireAuth, modalVisibility, toggleModalVisibility, cr
 
   return (
     <Modal animationType="slide" visible={modalVisibility} presentationStyle={'pageSheet'}>
-          
+
     <>
       <View style={{backgroundColor: "#f2f2f2", flex:1}}>
           <View style={{flexDirection:'row', justifyContent:"space-between", alignItems:"center", width: '100%', backgroundColor: "#FFFFFF", borderBottomColor: "#ababab", borderBottomWidth: 0.15}}>
@@ -157,7 +167,8 @@ const AddEntryComponent = ({fireAuth, modalVisibility, toggleModalVisibility, cr
                   onPress={handleCloseModal} 
                   type="clear"
               />
-              <Text style={{fontSize: 18, fontWeight: "600"}}>Add Entry</Text>
+             {//} <Text style={{fontSize: 18, fontWeight: "600"}}>Add Team</Text>
+}
               <Button 
                   style={{marginHorizontal: 10, marginVertical: 6, marginLeft: 10}} 
                   icon={
@@ -171,13 +182,9 @@ const AddEntryComponent = ({fireAuth, modalVisibility, toggleModalVisibility, cr
               />
           </View>
       
-
-          
-
-          <View style={{margin: 10}}>
           {image != null ?
               <>
-                <View style={{flexDirection: "row", justifyContent: "center", marginBottom: 10}} >
+                <View style={{flexDirection: "row", justifyContent: "center", marginVertical: 10}} >
                   <View style={{alignSelf:"center", width: 200, height: 150, borderWidth: 8, borderRadius: 10, borderColor: "#FFFFFF", alignContent: "center", shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowRadius: 5,
@@ -210,32 +217,36 @@ const AddEntryComponent = ({fireAuth, modalVisibility, toggleModalVisibility, cr
               <>
               <PhotoButton onPress={addPhotos} />
               </>
-            }
-
-            <View style={{alignContent: "center"}}>
-        
-              {entryFields ?
-              <FlatList 
-                data={entryFields}
-                renderItem={({item, index}) => (renderItem(item, index))}
-                keyExtractor={(item, index) => index}
-                ListHeaderComponent={<Input 
-                  containerStyle={styles.inputContainer}
-                  inputContainerStyle={styles.innerInputContainer}
-                  placeholder='Entry Name' 
-                  //leftIcon={{type: 'entypo', name: 'mail'}}
-                  onChangeText={(text) => {
-                    setEntryName(text);
-                  }}
-                />}
-                ListFooterComponent={<AddButton handlePress={handleAddField}/>}
-              />
-              : 
-              <Text>hi</Text>
-              }
-              
-             
-              </View>
+            }        
+          
+          <View style={{margin: 10}}>
+            <Input 
+                    containerStyle={styles.inputContainer}
+                    inputContainerStyle={styles.innerInputContainer}
+                    placeholder='Team Name' 
+                    //leftIcon={{type: 'entypo', name: 'mail'}}
+                    onChangeText={(text) => {
+                      setTeamName(text);
+                    }}
+                  />
+            <Input 
+                    containerStyle={styles.inputContainer}
+                    inputContainerStyle={styles.innerInputContainer}
+                    placeholder='Team Description' 
+                    //leftIcon={{type: 'entypo', name: 'mail'}}
+                    onChangeText={(text) => {
+                      setTeamDescription(text);
+                    }}
+                  />   
+            <Input 
+                    containerStyle={styles.inputContainer}
+                    inputContainerStyle={styles.innerInputContainer}
+                    placeholder='Team Passcode' 
+                    //leftIcon={{type: 'entypo', name: 'mail'}}
+                    onChangeText={(text) => {
+                      setTeamPasscode(text);
+                    }}
+                  />     
           </View>
       </View>
  
@@ -286,4 +297,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default AddEntryComponent;
+export default AddTeamComponent;

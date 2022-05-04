@@ -1,11 +1,11 @@
 import React, { useState, useEffect,} from 'react';
-import { StyleSheet, FlatList, View } from 'react-native';
+import { StyleSheet, FlatList, View, Alert, } from 'react-native';
 import { FAB, SearchBar, Button, Icon } from 'react-native-elements';
 import Collapsible from 'react-native-collapsible';
 
 import { getAuth} from 'firebase/auth';
-import { getFirestore ,collection, doc, setDoc, updateDoc} from 'firebase/firestore';
-import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
+import { getFirestore ,collection, doc, setDoc, updateDoc, } from 'firebase/firestore';
+import { getDownloadURL, getStorage, ref, uploadBytes} from 'firebase/storage';
 import { getApp } from 'firebase/app';
 import EntryButton from './EntryButton.js';
 import {AddEntryComponent} from '../componentIndex.js';
@@ -19,8 +19,9 @@ const firestore = getFirestore(app);
 const auth = getAuth();
 //const storage = getStorage();
 
-const EntryList = ({ navigation }) => {
-    const [values] = useCollectionData(collection(firestore, "Users", auth.currentUser.uid, "Entries"));
+const TeamEntryList = ({ route, navigation }) => {
+    const { teamID } = route.params;
+    const [values] = useCollectionData(collection(firestore, "Teams", teamID, "Entries"));
     const [searchVal, setSearchVal] = useState();
     const [searchData, setSearchData] = useState();
     const [collapsed, setCollapsed] = useState(true);
@@ -45,60 +46,79 @@ const EntryList = ({ navigation }) => {
     };
 
     const handleEntryTap = (entry) => {
-        navigation.navigate("Details", {entry});
+        navigation.navigate("Details", {entry, teamID});
     };
 
-const urltoFile = async (url, filename, mimeType) => {
-    return (fetch(url)
-        .then((response) => {
-            return response.blob();
-            
+    const getImage = async (entryID) => {
+        const imageRef = ref(storage, 'Teams/' + teamID + "/Entries/" + entryID + ".jpeg");
+               
+        const image = getDownloadURL(imageRef)
+        .then((url) => {
+            console.log(url)
+            return url;
         })
-        .then((buffer) => {
-            return new File([buffer], filename, {type:mimeType});
-        })
-    );
-}
+        .catch((error) => {
+            console.log(error);
+        });
 
-const uploadImage = async (docID, image) => {
-    const storageRef = ref(storage, 'Users/' + auth.currentUser.uid + "/Entries/" + docID + ".jpeg")
+        return image;
+    };
+ 
+    /* This code came in clutch from stackoverflow. 
+    Basically it converts the raw base64 data to a format that firebase accepts */
+    const urltoFile = async (url, filename, mimeType) => {
+        return (fetch(url)
+            .then((response) => {
+                return response.blob();
+                
+            })
+            .then((buffer) => {
+                return new File([buffer], filename, {type:mimeType});
+            })
+        );
+    }
 
-    urltoFile(`data:${image.mime};base64,${image.data}`, docID + ".jpeg", image.mime )
-    .then((image) => {
-        uploadBytes(storageRef, image)
-        .then(async () => {
-            await getDownloadURL(storageRef)
-            .then((value) => {
-                console.log(value)
-                const docRef = doc(firestore, "Users", auth.currentUser.uid, "Entries", docID);
-                updateDoc(docRef, {
-                    "image": value,
-                    "hasImage": true
+    const uploadImage = async (docID, image) => {
+        const storageRef = ref(storage, 'Teams/' + teamID + "/Entries/" + docID + ".jpeg")
+    
+        urltoFile(`data:${image.mime};base64,${image.data}`, docID + ".jpeg", image.mime )
+        .then((image) => {
+            uploadBytes(storageRef, image)
+            .then(async () => {
+                await getDownloadURL(storageRef)
+                .then((value) => {
+                    console.log(value)
+                    const docRef = doc(firestore, "Teams", teamID, "Entries", docID);
+                    updateDoc(docRef, {
+                        "image": value,
+                        "hasImage": true
+                    })
                 })
+
             })
         })
-    })
-    .catch((error) => {"something" + console.log(error)})
-    
-  }
+        .catch((error) => {"something" + console.log(error)})
+        
+      }
+
     const createDocument = async (entry, image) => {
     
-        const newDocRef = doc(collection(firestore, "Users", auth.currentUser.uid, "Entries"));
+        const newDocRef = doc(collection(firestore, "Teams", teamID, "Entries"));
         entry.entry_ID = newDocRef.id;
-        
         await setDoc(newDocRef, entry)
           .then((reference, data) => {
             //console.log(reference);
             //console.log(data);
+            
           })
           .catch((error) => {
-            console.log(error)
+            console.log("Something 2" + error)
           });
-          
-            if (image) {
-              
-              uploadImage(newDocRef.id, image);
-          }
+        
+          if (image) {
+            
+            uploadImage(newDocRef.id, image);
+        }
         
       };
 
@@ -122,12 +142,13 @@ const uploadImage = async (docID, image) => {
 
     const renderItem = ({item}) => {
 
-
+        
         return(
             <EntryButton 
                 entry={item} 
-               // image={getImage}  
+                image={getImage}  
                 handleButtonPress={handleEntryTap}
+                teamID={teamID}
             />
         );
     }
@@ -170,7 +191,6 @@ const uploadImage = async (docID, image) => {
                 inputContainerStyle={{margin: 0, borderRadius: 30,}}
             />
         </Collapsible>
-        
         <FlatList 
            
             horizontal={false}
@@ -182,7 +202,7 @@ const uploadImage = async (docID, image) => {
             keyExtractor={(item) => item.entry_ID}
            // onTouchStart={closeCollapsible}
         />
-
+        
         <FAB
             visible={true}
             icon={{
@@ -198,7 +218,7 @@ const uploadImage = async (docID, image) => {
             shadowOpacity: 1, }}
             onPress={toggleEntryModal}
         />
-        <AddEntryComponent createDocument={createDocument} fireAuth={auth} toggleModalVisibility={toggleEntryModal} modalVisibility={entryModalVisibility} />
+        <AddEntryComponent fireAuth={auth} toggleModalVisibility={toggleEntryModal} modalVisibility={entryModalVisibility} createDocument={createDocument}/>
         </>
     );
 };
@@ -224,4 +244,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default EntryList;
+export default TeamEntryList;

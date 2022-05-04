@@ -4,7 +4,7 @@ import type {Node} from 'react';
 import { LandingScreen, NavContainer } from './screenIndex.js';
 
 import { initializeApp } from 'firebase/app';
-import { getAuth, } from 'firebase/auth';
+import { connectAuthEmulator, getAuth, } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { getStorage } from 'firebase/storage';
@@ -21,7 +21,8 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth();
-const storage = getStorage(app, "gs://tent-official.appspot.com/");
+//connectAuthEmulator(auth, 'http://127.0.0.1:8080');
+//const storage = getStorage(app, "gs://tent-official.appspot.com/");
 
 const App: () => Node = () => {
   const [user] = useAuthState(auth);  

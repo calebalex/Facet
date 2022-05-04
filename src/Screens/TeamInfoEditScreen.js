@@ -1,30 +1,34 @@
 import React, { useState, useEffect,} from 'react';
-import { FlatList, View, Image, Alert} from 'react-native';
+import { FlatList, View, Image , Alert} from 'react-native';
 import { Icon, Button} from 'react-native-elements';
 import { Input } from 'react-native-elements';
 import ImageCropPicker from 'react-native-image-crop-picker';
 import { FieldItem, AddButton, PhotoButton} from '../componentIndex';
 import {doc, deleteDoc, updateDoc, getFirestore,} from "firebase/firestore";
 import { getAuth } from 'firebase/auth';
-import { ref, getStorage, uploadBytes, deleteObject, getDownloadURL} from 'firebase/storage';
+import { deleteObject, getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
+
 
 const firestore = getFirestore();
 const auth = getAuth();
 const storage = getStorage();
 
-const EditScreen = ({route, navigation}) => {
-    const entry = route.params.entry
-    const [entryName, setEntryName] = useState(entry.entry_name);
-    const [entryFields, setEntryFields] = useState(entry.entry_fields);
-    const entryID = entry.entry_ID;
-    const [image, setImage] = useState(entry.image);
-    const [imageURI, setImageURI] = useState(entry.image);
+const TeamInfoEditScreen = ({route, navigation}) => {
+    const team = route.params.team;
+    const [teamName, setTeamName] = useState(team.team_name);
+    const [teamDescription, setTeamDescription] = useState(team.team_description);
+    const [teamPasscode, setTeamPasscode] = useState(team.team_passcode);
+    const teamID = team.teamID;
+
+    const [image, setImage] = useState(team.team_image);
+    const [imageURI, setImageURI] = useState(team.team_image);
     const [imageUpdated, setImageUpdated] = useState(false);
 
-    const updatedEntry = {
-        entry_ID: entryID,
-        entry_name: entryName,
-        entry_fields: entryFields,
+    const updatedTeam = {
+        teamID: teamID,
+        team_name: teamName,
+        team_description: teamDescription,
+        team_passcode: teamPasscode,
     };
 
     const handleGoBack = () => {
@@ -44,105 +48,50 @@ const EditScreen = ({route, navigation}) => {
     }
     
     const uploadImage = async (docID, image) => {
-        const storageRef = ref(storage, 'Users/' + auth.currentUser.uid + "/Entries/" + docID + ".jpeg")
+        const storageRef = ref(storage, 'Teams/' + teamID + "/team_photo.jpeg")
     
-        urltoFile(`data:${image.mime};base64,${image.data}`, docID + ".jpeg", image.mime )
+        urltoFile(`data:${image.mime};base64,${image.data}`,  "team_photo.jpeg", image.mime )
         .then((image) => {
             uploadBytes(storageRef, image)
             .then(async () => {
                 await getDownloadURL(storageRef)
                 .then((value) => {
                     console.log(value)
-                    const docRef = doc(firestore, "Users", auth.currentUser.uid, "Entries", docID);
+                    const docRef = doc(firestore, "Teams", teamID,);
                     updateDoc(docRef, {
-                        "image": value,
+                        "team_image": value,
                         "hasImage": true
                     })
                 })
             })
             .catch((error) => {console.log(error)})
         })
-        .catch((error) => {"something" + console.log(error)})
+        .catch((error) => {console.log(error)})
         
       }
 
     const handleUpdate = () => {
-        const docRef = doc(firestore, "Users", auth.currentUser.uid, "Entries", entryID);
-
-        if (JSON.stringify(entry) != JSON.stringify(updatedEntry)) {
-            updateDoc(docRef, updatedEntry)
+        console.log("here")
+        const docRef = doc(firestore, "Teams", teamID);
+        console.log("here2")
+        
+            console.log("here 3")
+            updateDoc(docRef, updatedTeam)
             .then(() => {
-                navigation.navigate(route.params.previousScreen, {entry: updatedEntry});
+                navigation.goBack()
             })
+            
             .catch((error) => {
                 console.log(error);
             });
-            if(imageUpdated) {
-                uploadImage(updatedEntry.entry_ID, image)
+            if (imageUpdated) {
+                uploadImage(updatedTeam.team_ID, image)
             }
-        }
-        else {
-            console.log("Not updated");
-            handleGoBack();
-        }
+        
     };
 
-    const handleDelete = () => {
-        const docRef = doc(firestore,"Users", auth.currentUser.uid, "Entries", entry.entry_ID);
-        
-        if(entry.hasImage == true) {
-        
-            const storageRef = ref(storage, "Users/" + auth.currentUser.uid + "/Entries/" + entryID + ".jpeg");
-            deleteObject(storageRef)
-            .then(() => {
-                deleteDoc(docRef)
-                .then(() => {
-                    navigation.navigate("Entries");
-                })
-                .catch((error) => {
-                console.log(error);
-                });
-            })
-            .catch((error) => {
-                console.log(error);
-            })
-        } else {
-            deleteDoc(docRef)
-                .then(() => {
-                    navigation.navigate("Entries");
-                })
-                .catch((error) => {
-                console.log(error);
-                });
-        }
 
-    };
-
-    const handleAddField = () => {
-        const fields = [...entryFields];
-        fields.push(
-          {fieldName: "", fieldValue: ""}
-        );
-        setEntryFields(fields);
-        
-      }
-    
-      const handleRemoveField = (index) => {
-        const fields = [...entryFields];
-        fields.splice(index, 1);
-        setEntryFields(fields);
-      }
-    
-      const handleInputChange = (index, value, target) => {
-        const fields = [...entryFields];
-        const updatedField = target;
-        fields[index][updatedField] = value;
-    
-        setEntryFields(fields);
-        
-      };
-
-      const addPhotos = () => {
+    const addPhotos = () => {
         Alert.alert("Options",null,  
                 [
                     {
@@ -187,33 +136,6 @@ const EditScreen = ({route, navigation}) => {
       
       }
 
-    const renderItem = (field, index) => {
-
-        let name = null;
-        let value = null;
-    
-        Object.keys(field).map((key) => {
-          if(key === 'fieldName') {
-            name = field[key]; 
-          }
-          if(key === 'fieldValue') {
-            value = field[key];
-          }
-        })
-        
-        return(
-            <View style={{marginBottom: 15}}>
-              <FieldItem 
-                itemIndex={index} 
-                title={name} 
-                itemValue={value} 
-                onDelete={handleRemoveField} 
-                onTextChange={handleInputChange} 
-              />
-            </View>);
-        
-    };
-  
     useEffect(() => {
         navigation.setOptions({
             headerRight: () => {
@@ -238,11 +160,11 @@ const EditScreen = ({route, navigation}) => {
                 );
             }
         });
-    }, [navigation, updatedEntry]);
+    }, [navigation, updatedTeam]);
 
     return(
         <>
-            {entry.hasImage != false || image != null ?
+            {team.hasImage != false || image != null ?
               <>
                 <View style={{flexDirection: "row", justifyContent: "center", marginVertical: 10}} >
                   <View style={{alignSelf:"center", width: 200, height: 150, borderWidth: 8, borderRadius: 10, borderColor: "#FFFFFF", alignContent: "center", shadowColor: '#000',
@@ -278,31 +200,12 @@ const EditScreen = ({route, navigation}) => {
               <PhotoButton onPress={addPhotos} />
               </>
             }
-            
-            {entryFields ?
-              <FlatList 
-                data={entryFields}
-                renderItem={({item, index}) => (renderItem(item, index))}
-                keyExtractor={(item, index) => index}
-                ListHeaderComponent={
-                    <Input 
-                        label="Entry Name" 
-                        onChangeText={ (text) => { setEntryName(text);}}
-                    >{entryName}</Input>}
-                ListFooterComponent={
-                    <>
-                        <AddButton handlePress={handleAddField}/>
-                        <Button onPress={handleDelete} title={"Delete Entry"} />
-                    </>
-                }
-                
-              />
-              : 
-              <Text>hi</Text>
-              }
-            
+
+            <Input label="Team Name" value={teamName} onChangeText={(text)=>setTeamName(text)}/>
+            <Input multiline={true} label="Description" value={teamDescription} onChangeText={(text)=>setTeamDescription(text)}/>
+            <Input label="Team Passcode" value={teamPasscode} onChangeText={(text)=>setTeamPasscode(text)} />
         </>
     ); 
 };
 
-export default EditScreen;
+export default TeamInfoEditScreen;

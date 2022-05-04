@@ -5,11 +5,13 @@ import { LoadingIndicator} from '../componentIndex.js';
 import { NavigationContainer, } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-import { getAuth, } from 'firebase/auth';
+import { connectAuthEmulator, getAuth, } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
 const Tab = createBottomTabNavigator();
 const auth = getAuth();
+
+
 const NavContainer = () => {
   
   const [user] = useAuthState(auth);
@@ -29,7 +31,7 @@ const NavContainer = () => {
           iconName="clipboard-list"
           fontName="font-awesome-5";
           break;
-        case "Teams":
+        case "Teams Screen":
           iconName="users";
           fontName="font-awesome";
           break;
@@ -63,7 +65,7 @@ const NavContainer = () => {
         {//<Tab.Screen name="Home" component={HomeScreen} />
         }
         <Tab.Screen name="Entries Screen" component={EntriesScreen} options={{ headerShown: false }} />
-        <Tab.Screen name="Teams" component={TeamsScreen}/>
+        <Tab.Screen name="Teams Screen" component={TeamsScreen} options={{ headerShown: false }}/>
         <Tab.Screen name="Profile" component={ProfileScreen}/>
       </Tab.Navigator>
     </NavigationContainer>

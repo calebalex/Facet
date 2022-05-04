@@ -8,3 +8,7 @@ export {default as DetailScreen} from './Screens/DetailScreen.js';
 export {default as EditScreen} from './Screens/EditScreen.js';
 export {default as LogScreen} from './Screens/LogScreen.js';
 export {default as LogEntryModal} from './Screens/LogEntryModal.js';
+export {default as TeamScreen} from './Screens/TeamScreen.js'
+export {default as TeamEditScreen} from './Screens/TeamEditScreen.js';
+export {default as TeamLogScreen} from './Screens/TeamLogScreen.js';
+export {default as TeamInfoEditScreen} from './Screens/TeamInfoEditScreen.js';

@@ -46,7 +46,7 @@ const EntriesScreen = () => {
           }}
           */
         />
-        <Stack.Screen name="Details" component={DetailScreen} options={({route}) => ({title: route.params.entry.tool_name})}/>
+        <Stack.Screen name="Details" component={DetailScreen} options={({route}) => ({title: route.params.entry.entry_name})}/>
         <Stack.Screen name="Edit" component={EditScreen} />
         <Stack.Screen name="Service Logs" component={LogScreen} />
       </Stack.Navigator> 

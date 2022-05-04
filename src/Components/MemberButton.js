@@ -1,21 +1,27 @@
 import React, { useEffect, useState, useRef } from 'react';
-import {View, StyleSheet, Text, Pressable, Image, Animated} from 'react-native';
+import {View, StyleSheet, Text, Pressable, Image, Animated, Alert} from 'react-native';
 import { VibrancyView } from '@react-native-community/blur';
-import { ref, getStorage, getBytes, getDownloadURL } from 'firebase/storage';
-import { useDownloadURL } from 'react-firebase-hooks/storage'
-import LoadingIndicator from './LoadingIndicator';
+import { getAuth } from 'firebase/auth';
 
-const storage = getStorage();
+const auth = getAuth();
 
-const EntryButton = (props) => {
+const MemberButton = (props) => {
+    //const [image, setImage] = useState();
     const scale = useRef(new Animated.Value(1)).current;
-    
-    //const [imageDownload, loading, error] = useDownloadURL(ref(storage, props.entry.image))
-    
+    const memberName = props.member.first_name + " " + props.member.last_name;
+    const memberID = props.member.member_id
+    const image = props.member.imageURL
     const viewEntry = () => {
-        props.handleButtonPress(props.entry);
-    };
+        props.viewEntry(props.member)
+    }
 
+    /*
+    useEffect(() => {
+        if (props.entry.hasImage) {
+            setImage(props.entry.cover_photo);
+        }
+    }, [image]);
+*/
     const resizeAnim = async (scaleToExpand) => {
             Animated.spring(scale, {
                 toValue: scaleToExpand,
@@ -32,14 +38,13 @@ const EntryButton = (props) => {
 
     return(
        <View  style={styles.container}>
-            <Animated.View style={{transform: [{scale: scale}]}}>
+            <Animated.View style={{transform: [{scale: scale}], alignItems: "center"}}>
+                    
                     <Pressable style={styles.buttonContainer} onPressIn={() => {resizeAnim(1.03)}} onPressOut={() => {resizeAnim(1);}} onPress={viewEntry}>
-                        
-                        <Image style={styles.image} source={{uri: props.entry.image}}/>
-                        
+                        <Image style={styles.image} source={{uri: image}}/>
                     </Pressable>  
-                    <View style={styles.text}>
-                        <Text style={{alignSelf:"center",fontSize: 16, fontWeight: "500"}}>{props.entry.entry_name}</Text>
+                    <View style={{marginTop: 5}}>
+                        <Text style={{alignSelf:"center",fontSize: 16, fontWeight: "500"}}>{props.member.display_name}</Text>
                     </View> 
             </Animated.View>
             
@@ -63,8 +68,8 @@ const styles = StyleSheet.create({
     buttonContainer: {
         borderWidth:0,
         backgroundColor: "#FFFFFF",
-        borderRadius: 15, 
-        width: '100%', 
+        borderRadius: 100, 
+        width: 125, 
         height: 125, 
         justifyContent: "flex-end", 
         flexDirection: "column",
@@ -75,11 +80,11 @@ const styles = StyleSheet.create({
         alignSelf: "flex-start", 
         height: '100%',
         width: '100%',
-        borderRadius: 15, 
-        borderRadius: 15,
+        borderRadius: 100, 
+        
         
     },
     
 
 });
-export default EntryButton;
+export default MemberButton;
